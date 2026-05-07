@@ -1094,7 +1094,7 @@ let products = [];
 // Функция загрузки товаров с сервера
 async function loadProducts() {
   try {
-    const response = await fetch('http://localhost:3000/api/products');
+    const response = await fetch('/api/products');
     products = await response.json();
     console.log('✅ Товары загружены с сервера:', products.length);
     
@@ -1440,7 +1440,7 @@ async function register() {
   if (hasError) return;
   
   try {
-    const response = await fetch('http://localhost:3000/api/register', {
+    const response = await fetch('/api/register', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({email, password, phone})
@@ -1475,7 +1475,7 @@ async function login(email, password) {
   }
   
   try {
-    const response = await fetch('http://localhost:3000/api/login', {
+    const response = await fetch('/api/login', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({email, password})
@@ -1788,7 +1788,7 @@ async function finish() {
   if (hasError) return;
   
   try {
-    const response = await fetch('http://localhost:3000/api/orders', {
+    const response = await fetch('/api/orders', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -1843,7 +1843,7 @@ async function finish() {
 async function cancelOrder(orderId) {
   if (confirm("Вы уверены, что хотите отменить этот заказ?")) {
     try {
-      const response = await fetch(`http://localhost:3000/api/orders/${orderId}/cancel`, {
+      const response = await fetch(`/api/orders/${orderId}/cancel`, {
         method: 'PUT',
         headers: {'Content-Type': 'application/json'}
       });
@@ -1878,7 +1878,7 @@ async function renderOrders() {
   }
   
   try {
-    const response = await fetch(`http://localhost:3000/api/orders/${user.email}`);
+    const response = await fetch(`/api/orders/${user.email}`);
     const userOrders = await response.json();
     
     if (userOrders.length === 0) {

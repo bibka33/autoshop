@@ -252,7 +252,7 @@
     
     async function loadStats() {
         try {
-            const response = await fetch('http://localhost:3000/api/stats');
+            const response = await fetch('/api/stats');
             const stats = await response.json();
             document.getElementById('totalOrders').textContent = stats.total_orders || 0;
             document.getElementById('totalRevenue').textContent = (stats.total_revenue || 0) + ' ₽';
@@ -272,7 +272,7 @@
         const endDate = document.getElementById('endDate').value;
         
         try {
-            let url = 'http://localhost:3000/api/all-orders';
+            let url = '/api/all-orders';
             const response = await fetch(url);
             const orders = await response.json();
             currentOrders = orders;
@@ -329,7 +329,7 @@
         const startDate = document.getElementById('startDate').value;
         const endDate = document.getElementById('endDate').value;
         
-        let url = 'http://localhost:3000/api/export-excel';
+        let url = '/api/export-excel';
         if (startDate && endDate) {
             url += `?startDate=${startDate}&endDate=${endDate}`;
         }
