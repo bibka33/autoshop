@@ -836,6 +836,16 @@ input:focus, select:focus {
       </div>
     </div>
   </div>
+
+<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:15px;">
+  <input id="searchInput" type="text" placeholder="Поиск товаров..." 
+  style="padding:12px;border:1px solid #ccc;border-radius:6px;min-width:260px;">
+  <button onclick="searchProducts()">Поиск</button>
+  <button class="blue" onclick="showContacts()">Контакты</button>
+  <button class="gray" onclick="showVinInfo()">VIN поиск</button>
+  <button class="green" onclick="showSupport()">Тех. поддержка</button>
+</div>
+
 </header>
 
 <main>
@@ -867,7 +877,7 @@ input:focus, select:focus {
         <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-left: 4px solid #e74c3c; height: 100%;">
           <i class="fas fa-shipping-fast" style="font-size: 36px; color: #e74c3c; margin-bottom: 15px;"></i>
           <h3 style="color: #2c3e50;">Быстрая доставка</h3>
-          <p style="color: #7f8c8d; font-size: 14px;">Доставка по городу за 24 часа</p>
+          <p style="color: #7f8c8d; font-size: 14px;">Товары приезжают быстро и всегда доступны к заказу за 24 часа</p>
         </div>
       </div>
       <div class="col">
@@ -1090,6 +1100,77 @@ input:focus, select:focus {
       </div>
     </div>
   </div>
+
+<div id="contacts-section" class="hidden" style="background:#fff;padding:25px;margin-top:20px;border-radius:10px;">
+<h2>Контакты</h2>
+<p><b>Телефон:</b> +7 (999) 123-45-67</p>
+<p><b>Email:</b> info@autostyle.ru</p>
+<p><b>Запчасти:</b> Сейчас доступны товары только для автомобилей LADA</p>
+<iframe src="https://widgets.2gis.com/widget?type=firmsonmap&options=meta"
+width="100%" height="300" frameborder="0"></iframe>
+</div>
+
+<div id="vin-section" class="hidden" style="background:#fff;padding:25px;margin-top:20px;border-radius:10px;">
+<h2>Поиск по VIN</h2>
+<p>Поиск по VIN номеру пока недоступен.</p>
+<p>Сейчас доступны запчасти только для автомобилей LADA.</p>
+</div>
+
+<div id="support-section" class="hidden" style="background:#fff;padding:25px;margin-top:20px;border-radius:10px;">
+<h2>Техническая поддержка</h2>
+<p style="color:#e74c3c;font-weight:bold;">
+Техническая поддержка временно работает в оффлайн-режиме.
+</p>
+<input type="text" placeholder="Ваше имя" style="display:block;width:100%;padding:10px;margin:10px 0;">
+<input type="text" placeholder="Телефон или Email" style="display:block;width:100%;padding:10px;margin:10px 0;">
+<textarea placeholder="Сообщение" style="display:block;width:100%;padding:10px;height:120px;"></textarea>
+<button style="margin-top:10px;">Отправить заявку</button>
+</div>
+
+<div style="background:#fff;padding:25px;margin-top:20px;border-radius:10px;">
+<h2>Правила магазина</h2>
+<ul>
+<li>Проверяйте совместимость товаров перед заказом.</li>
+<li>Возврат возможен в течение 14 дней.</li>
+<li>Товары резервируются после оформления заказа.</li>
+</ul>
+<label style="display:flex;gap:10px;align-items:center;">
+<input type="checkbox" id="rulesAgree">
+Я согласен с правилами магазина
+</label>
+</div>
+
+<script>
+function searchProducts(){
+ const q = document.getElementById('searchInput').value.toLowerCase();
+ document.querySelectorAll('.item').forEach(item=>{
+   item.style.display = item.innerText.toLowerCase().includes(q) ? 'flex' : 'none';
+ });
+}
+
+function showContacts(){
+ document.getElementById('contacts-section').classList.toggle('hidden');
+}
+
+function showVinInfo(){
+ document.getElementById('vin-section').classList.toggle('hidden');
+}
+
+function showSupport(){
+ document.getElementById('support-section').classList.toggle('hidden');
+}
+
+document.addEventListener('click', function(e){
+ if(e.target.innerText && e.target.innerText.includes('Оформить')){
+   const rules = document.getElementById('rulesAgree');
+   if(rules && !rules.checked){
+     alert('Подтвердите согласие с правилами магазина');
+     e.preventDefault();
+   }
+ }
+});
+</script>
+
 </footer>
 
 </div>
@@ -1281,7 +1362,7 @@ function showHome() {
           <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-left: 4px solid #e74c3c; height: 100%;">
             <i class="fas fa-shipping-fast" style="font-size: 36px; color: #e74c3c; margin-bottom: 15px;"></i>
             <h3 style="color: #2c3e50;">Быстрая доставка</h3>
-            <p style="color: #7f8c8d; font-size: 14px;">Доставка по городу за 24 часа</p>
+            <p style="color: #7f8c8d; font-size: 14px;">Товары приезжают быстро и всегда доступны к заказу за 24 часа</p>
           </div>
         </div>
         <div class="col">
