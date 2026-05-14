@@ -3,6 +3,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const XLSX = require('xlsx');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -11,211 +12,164 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-// Используем SQLite через встроенный модуль (не требует установки)
-const Database = require('sqlite3').verbose();
-const db = new Database.Database('./autoshop.db');
+// ========== ФАЙЛОВАЯ БАЗА ДАННЫХ (JSON) ==========
+const DATA_FILE = './data.json';
 
-// ========== СОЗДАНИЕ ТАБЛИЦ ==========
-db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS products (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    price INTEGER NOT NULL,
-    category TEXT NOT NULL,
-    stock INTEGER DEFAULT 10,
-    description TEXT,
-    characteristics TEXT,
-    image TEXT
-  )`);
-
-  db.run(`CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    phone TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
-
-  db.run(`CREATE TABLE IF NOT EXISTS orders (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    user_email TEXT NOT NULL,
-    user_phone TEXT NOT NULL,
-    pickup_point TEXT NOT NULL,
-    payment_method TEXT NOT NULL,
-    total INTEGER NOT NULL,
-    status TEXT DEFAULT 'processing',
-    order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    delivery_date TEXT,
-    items TEXT
-  )`);
-
-  db.run(`CREATE TABLE IF NOT EXISTS favorites (
-    user_id INTEGER,
-    product_id INTEGER,
-    PRIMARY KEY (user_id, product_id)
-  )`);
-});
-
-// ========== API (промисы для удобства) ==========
-function allQuery(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows);
-    });
-  });
-}
-
-function getQuery(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) reject(err);
-      else resolve(row);
-    });
-  });
-}
-
-function runQuery(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function(err) {
-      if (err) reject(err);
-      else resolve({ lastID: this.lastID });
-    });
-  });
-}
-
-// ========== ИНИЦИАЛИЗАЦИЯ ТОВАРОВ ==========
-async function initProducts() {
-  const products = [
-    {name:'Масло моторное LADA Professional 5W-40', price:2100, category:'Двигатель', stock:25, description:'Оригинальное масло', characteristics:'5W-40, синтетика, 4л'},
-    {name:'Ароматизатор "Кожа"', price:350, category:'Ароматизаторы', stock:50, description:'Запах дорогого авто', characteristics:'Стойкость 30 дней'},
-    {name:'Очиститель стёкол', price:280, category:'Автохимия', stock:30, description:'Без разводов', characteristics:'Зимний до -30°C'}
-  ];
-
-  try {
-    const row = await getQuery("SELECT COUNT(*) as count FROM products");
-    if (row.count === 0) {
-      for (const p of products) {
-        await runQuery("INSERT INTO products (name, price, category, stock, description, characteristics) VALUES (?, ?, ?, ?, ?, ?)",
-          [p.name, p.price, p.category, p.stock, p.description, p.characteristics]);
-      }
-      console.log('✅ Товары загружены');
-    }
-  } catch (err) {
-    console.error('Ошибка:', err);
+// Инициализация данных
+function initData() {
+  if (!fs.existsSync(DATA_FILE)) {
+    const initialData = {
+      products: [
+        {id:1, name:'Масло моторное LADA Professional 5W-40', price:2100, category:'Двигатель', stock:25, description:'Оригинальное масло', characteristics:'5W-40, синтетика, 4л'},
+        {id:2, name:'Ароматизатор "Кожа"', price:350, category:'Ароматизаторы', stock:50, description:'Запах дорогого авто', characteristics:'Стойкость 30 дней'},
+        {id:3, name:'Ароматизатор "Мятная свежесть"', price:390, category:'Ароматизаторы', stock:45, description:'Мятный аромат', characteristics:'Гель 50мл'},
+        {id:4, name:'Очиститель стёкол', price:280, category:'Автохимия', stock:30, description:'Без разводов', characteristics:'Зимний до -30°C'},
+        {id:5, name:'Тормозные колодки LADA', price:1200, category:'Тормозная система', stock:20, description:'Оригинальные колодки', characteristics:'Керамические'},
+        {id:6, name:'Воздушный фильтр LADA', price:450, category:'Двигатель', stock:30, description:'Очистка воздуха', characteristics:'Для LADA'},
+        {id:7, name:'Аккумулятор LADA 60 Ач', price:4500, category:'Электрика', stock:8, description:'Стартерный', characteristics:'Пусковой ток 540А'},
+        {id:8, name:'Амортизатор LADA', price:2200, category:'Подвеска', stock:18, description:'Гидравлический', characteristics:'Для Vesta/Granta'},
+        {id:9, name:'Полироль для кузова', price:650, category:'Автохимия', stock:20, description:'Придаёт блеск', characteristics:'Восковая эмульсия'},
+        {id:10, name:'Антидождь', price:420, category:'Автохимия', stock:25, description:'Вода скатывается', characteristics:'Нано-покрытие'}
+      ],
+      users: [],
+      orders: [],
+      favorites: []
+    };
+    fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
+    console.log('✅ Данные инициализированы');
   }
 }
 
-// API endpoints
-app.get('/api/products', async (req, res) => {
-  try {
-    const rows = await allQuery("SELECT * FROM products");
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({error: err.message});
-  }
+function readData() {
+  return JSON.parse(fs.readFileSync(DATA_FILE));
+}
+
+function writeData(data) {
+  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+}
+
+initData();
+
+// ========== API ==========
+app.get('/api/products', (req, res) => {
+  const data = readData();
+  res.json(data.products);
 });
 
-app.post('/api/register', async (req, res) => {
+app.post('/api/register', (req, res) => {
   const {email, password, phone} = req.body;
-  try {
-    await runQuery("INSERT INTO users (email, password, phone) VALUES (?, ?, ?)", [email, password, phone]);
-    res.json({success: true});
-  } catch (err) {
-    res.status(400).json({error: 'Email уже существует'});
+  const data = readData();
+  if (data.users.find(u => u.email === email)) {
+    return res.status(400).json({error: 'Email уже существует'});
   }
+  const newUser = {id: Date.now(), email, password, phone, created_at: new Date()};
+  data.users.push(newUser);
+  writeData(data);
+  res.json({success: true, userId: newUser.id});
 });
 
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', (req, res) => {
   const {email, password} = req.body;
-  try {
-    const user = await getQuery("SELECT * FROM users WHERE email = ? AND password = ?", [email, password]);
-    if (!user) return res.status(401).json({error: 'Неверный email или пароль'});
-    res.json({success: true, user: {id: user.id, email: user.email, phone: user.phone}});
-  } catch (err) {
-    res.status(500).json({error: err.message});
-  }
+  const data = readData();
+  const user = data.users.find(u => u.email === email && u.password === password);
+  if (!user) return res.status(401).json({error: 'Неверный email или пароль'});
+  res.json({success: true, user: {id: user.id, email: user.email, phone: user.phone}});
 });
 
-app.post('/api/orders', async (req, res) => {
+app.post('/api/orders', (req, res) => {
   const {user_id, user_email, user_phone, pickup_point, payment_method, total, items} = req.body;
-  try {
-    for (const item of items) {
-      const product = await getQuery("SELECT stock FROM products WHERE id = ?", [item.id]);
-      if (!product || product.stock < item.quantity) {
-        return res.status(400).json({error: `Товар "${item.name}" недоступен`});
-      }
+  const data = readData();
+  
+  // Проверка наличия
+  for (const item of items) {
+    const product = data.products.find(p => p.id === item.id);
+    if (!product || product.stock < item.quantity) {
+      return res.status(400).json({error: `Товар "${item.name}" недоступен`});
     }
+  }
+  
+  // Уменьшаем склад
+  for (const item of items) {
+    const product = data.products.find(p => p.id === item.id);
+    product.stock -= item.quantity;
+  }
+  
+  const deliveryDate = new Date();
+  deliveryDate.setDate(deliveryDate.getDate() + 1);
+  
+  const newOrder = {
+    id: Date.now(),
+    user_id,
+    user_email,
+    user_phone,
+    pickup_point,
+    payment_method,
+    total,
+    status: 'processing',
+    order_date: new Date(),
+    delivery_date: deliveryDate,
+    items: JSON.stringify(items)
+  };
+  data.orders.push(newOrder);
+  writeData(data);
+  
+  res.json({success: true, orderId: newOrder.id, deliveryDate: deliveryDate.toLocaleDateString('ru-RU')});
+});
+
+app.get('/api/orders/:email', (req, res) => {
+  const data = readData();
+  const orders = data.orders.filter(o => o.user_email === req.params.email).sort((a,b) => new Date(b.order_date) - new Date(a.order_date));
+  res.json(orders);
+});
+
+app.get('/api/all-orders', (req, res) => {
+  const data = readData();
+  res.json(data.orders.sort((a,b) => new Date(b.order_date) - new Date(a.order_date)));
+});
+
+app.put('/api/orders/:id/cancel', (req, res) => {
+  const data = readData();
+  const order = data.orders.find(o => o.id == req.params.id);
+  if (order && order.status !== 'cancelled') {
+    // Возвращаем товары на склад
+    const items = JSON.parse(order.items);
     for (const item of items) {
-      await runQuery("UPDATE products SET stock = stock - ? WHERE id = ?", [item.quantity, item.id]);
+      const product = data.products.find(p => p.id === item.id);
+      if (product) product.stock += item.quantity;
     }
-    const deliveryDate = new Date();
-    deliveryDate.setDate(deliveryDate.getDate() + 1);
-    const result = await runQuery(`INSERT INTO orders (user_id, user_email, user_phone, pickup_point, payment_method, total, delivery_date, items)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [user_id, user_email, user_phone, pickup_point, payment_method, total, deliveryDate.toISOString(), JSON.stringify(items)]);
-    res.json({success: true, orderId: result.lastID, deliveryDate: deliveryDate.toLocaleDateString('ru-RU')});
-  } catch (err) {
-    res.status(500).json({error: err.message});
+    order.status = 'cancelled';
+    writeData(data);
   }
+  res.json({success: true});
 });
 
-app.get('/api/orders/:email', async (req, res) => {
-  try {
-    const rows = await allQuery("SELECT * FROM orders WHERE user_email = ? ORDER BY order_date DESC", [req.params.email]);
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({error: err.message});
-  }
-});
-
-app.get('/api/all-orders', async (req, res) => {
-  try {
-    const rows = await allQuery("SELECT * FROM orders ORDER BY order_date DESC");
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({error: err.message});
-  }
-});
-
-app.put('/api/orders/:id/cancel', async (req, res) => {
-  try {
-    await runQuery("UPDATE orders SET status = 'cancelled' WHERE id = ?", [req.params.id]);
-    res.json({success: true});
-  } catch (err) {
-    res.status(500).json({error: err.message});
-  }
-});
-
-app.get('/api/products/search/:query', async (req, res) => {
-  try {
-    const query = `%${req.params.query}%`;
-    const rows = await allQuery("SELECT * FROM products WHERE name LIKE ? OR category LIKE ?", [query, query]);
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({error: err.message});
-  }
+app.get('/api/products/search/:query', (req, res) => {
+  const data = readData();
+  const query = req.params.query.toLowerCase();
+  const results = data.products.filter(p => 
+    p.name.toLowerCase().includes(query) || 
+    p.category.toLowerCase().includes(query) ||
+    (p.characteristics && p.characteristics.toLowerCase().includes(query))
+  );
+  res.json(results);
 });
 
 app.post('/api/support', (req, res) => {
-  res.json({success: true, status: 'offline'});
+  console.log('Support request:', req.body);
+  res.json({success: true, status: 'offline', message: 'Техподдержка в оффлайн режиме'});
 });
 
-app.get('/api/stats', async (req, res) => {
-  try {
-    const row = await getQuery("SELECT COUNT(*) as total_orders, SUM(total) as total_revenue FROM orders WHERE status != 'cancelled'");
-    res.json(row || {total_orders: 0, total_revenue: 0});
-  } catch (err) {
-    res.json({total_orders: 0, total_revenue: 0});
-  }
+app.get('/api/stats', (req, res) => {
+  const data = readData();
+  const activeOrders = data.orders.filter(o => o.status !== 'cancelled');
+  const totalRevenue = activeOrders.reduce((sum, o) => sum + o.total, 0);
+  res.json({total_orders: activeOrders.length, total_revenue: totalRevenue});
 });
 
 app.get('/reports.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'reports.html'));
 });
 
-initProducts();
 app.listen(PORT, () => {
   console.log(`🚀 Сервер запущен на порту ${PORT}`);
 });
