@@ -530,6 +530,73 @@
       .item-actions { justify-content: center; }
       .logo { font-size: 18px; }
     }
+    /* Fix для выпадающего меню */
+.profile-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.profile-dropdown {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: white;
+  min-width: 220px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  border-radius: 10px;
+  z-index: 1000;
+  margin-top: 5px;
+  border-top: 3px solid #e74c3c;
+}
+
+/* Меню показывается при наведении на кнопку ИЛИ на само меню */
+.profile-menu:hover .profile-dropdown,
+.profile-dropdown:hover {
+  display: block !important;
+}
+
+/* Прозрачный мост между кнопкой и меню (чтобы курсор не терял меню) */
+.profile-dropdown::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 0;
+  right: 0;
+  height: 10px;
+  background: transparent;
+}
+
+/* Стили для пунктов меню */
+.profile-dropdown a,
+.profile-dropdown button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  color: #2c3e50;
+  text-decoration: none;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.profile-dropdown a:hover,
+.profile-dropdown button:hover {
+  background: #f8f9fa;
+  color: #e74c3c;
+  padding-left: 25px;
+}
+
+.profile-dropdown hr {
+  margin: 8px 0;
+  border: none;
+  border-top: 1px solid #ecf0f1;
+}
   </style>
 </head>
 <body>
@@ -562,15 +629,18 @@
       <button id="loginBtn" onclick="show('login')" class="blue">ВОЙТИ</button>
       <div id="userPanel" class="hidden">
         <div class="profile-menu">
-          <button class="profile-btn"><i class="fas fa-user-circle"></i> Кабинет</button>
-          <div class="profile-dropdown">
-            <a onclick="show('catalog')"><i class="fas fa-list"></i> Каталог</a>
-            <a onclick="show('orders')"><i class="fas fa-clipboard-list"></i> Мои заказы</a>
-            <a onclick="show('favorites')"><i class="fas fa-heart"></i> Избранное <span id="favCount" class="fav-count">0</span></a>
-            <a onclick="openCart()"><i class="fas fa-shopping-cart"></i> Корзина <span id="cartCount" class="cart-count">0</span></a>
-            <hr>
-            <button onclick="logout()"><i class="fas fa-sign-out-alt"></i> Выйти</button>
-          </div>
+  <button class="profile-btn" style="background: #e74c3c; border-radius: 6px; padding: 8px 16px; color: white; border: none; cursor: pointer;">
+    <i class="fas fa-user-circle"></i> Кабинет
+  </button>
+  <div class="profile-dropdown">
+    <a onclick="show('catalog')"><i class="fas fa-list"></i> Каталог</a>
+    <a onclick="show('orders')"><i class="fas fa-clipboard-list"></i> Мои заказы</a>
+    <a onclick="show('favorites')"><i class="fas fa-heart"></i> Избранное <span id="favCount" class="fav-count">0</span></a>
+    <a onclick="openCart()"><i class="fas fa-shopping-cart"></i> Корзина <span id="cartCount" class="cart-count">0</span></a>
+    <hr>
+    <button onclick="logout()"><i class="fas fa-sign-out-alt"></i> Выйти</button>
+  </div>
+</div>
         </div>
       </div>
     </div>
