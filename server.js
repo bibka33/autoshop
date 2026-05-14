@@ -3,6 +3,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const XLSX = require('xlsx');
 const path = require('path');
+const WebSocket = require('ws');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
@@ -12,11 +13,16 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-// Supabase подключение (используем SERVICE_KEY для полного доступа)
+// Supabase подключение с WebSocket поддержкой
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  realtime: {
+    transport: WebSocket
+  }
+});
 
+// ... остальной код API без изменений ...
 // ========== API ==========
 
 // Получить все товары
