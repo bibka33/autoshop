@@ -1,2 +1,14 @@
 [phases.setup]
-nixPkgs = ["nodejs_20"]
+nixPkgs = ["nodejs_18"]
+
+[phases.install]
+cmds = ["npm install"]
+
+[phases.build]
+cmds = ["npm run build --if-present"]
+
+[start]
+cmd = "npm start"
+
+[env]
+NODE_ENV = "production"
