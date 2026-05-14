@@ -673,19 +673,24 @@
 </section>
 
       <section id="register" class="hidden">
-        <h2>Регистрация</h2>
-        <div class="auth-form">
-          <input id="regEmail" placeholder="E-MAIL" type="email">
-          <div id="regEmailError" class="error"></div>
-          <input id="regPass" type="password" placeholder="ПАРОЛЬ (мин. 8 символов)">
-          <div id="regPassError" class="error"></div>
-          <input id="regPhone" placeholder="ТЕЛЕФОН (7-XXX-XXX-XX-XX)" maxlength="16">
-          <div id="regPhoneError" class="error"></div>
-          <button onclick="register()" class="green">ЗАРЕГИСТРИРОВАТЬСЯ</button>
-          <p style="margin-top: 15px;">Уже зарегистрированы? <a href="#" onclick="show('login')" style="color:#e74c3c">ВОЙТИ</a></p>
-          <button class="gray" onclick="show('home')">На главную</button>
-        </div>
-      </section>
+  <div style="max-width: 500px; margin: 0 auto;">
+    <h2 style="text-align: center;">Регистрация</h2>
+    <div class="auth-form" style="padding: 40px;">
+      <div style="text-align: center; margin-bottom: 25px;">
+        <i class="fas fa-user-plus" style="font-size: 64px; color: #e74c3c;"></i>
+      </div>
+      <input id="regEmail" placeholder="E-MAIL" type="email" style="padding: 14px; font-size: 16px;">
+      <div id="regEmailError" class="error"></div>
+      <input id="regPass" type="password" placeholder="ПАРОЛЬ (мин. 8 символов)" style="padding: 14px; font-size: 16px;">
+      <div id="regPassError" class="error"></div>
+      <input id="regPhone" placeholder="ТЕЛЕФОН (7-XXX-XXX-XX-XX)" maxlength="16" style="padding: 14px; font-size: 16px;">
+      <div id="regPhoneError" class="error"></div>
+      <button onclick="register()" class="green" style="width: 100%; padding: 14px; margin-top: 10px;">ЗАРЕГИСТРИРОВАТЬСЯ</button>
+      <p style="margin-top: 20px; text-align: center;">Уже зарегистрированы? <a href="#" onclick="show('login')" style="color:#e74c3c">ВОЙТИ</a></p>
+      <button class="gray" onclick="show('home')" style="width: 100%; margin-top: 10px;">На главную</button>
+    </div>
+  </div>
+</section>
 
       <section id="catalog" class="hidden">
         <h2>Каталог товаров</h2>
