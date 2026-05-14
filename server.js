@@ -3,7 +3,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const XLSX = require('xlsx');
 const path = require('path');
-const fs = require('fs');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,164 +12,265 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-// ========== ФАЙЛОВАЯ БАЗА ДАННЫХ (JSON) ==========
-const DATA_FILE = './data.json';
-
-// Инициализация данных
-function initData() {
-  if (!fs.existsSync(DATA_FILE)) {
-    const initialData = {
-      products: [
-        {id:1, name:'Масло моторное LADA Professional 5W-40', price:2100, category:'Двигатель', stock:25, description:'Оригинальное масло', characteristics:'5W-40, синтетика, 4л'},
-        {id:2, name:'Ароматизатор "Кожа"', price:350, category:'Ароматизаторы', stock:50, description:'Запах дорогого авто', characteristics:'Стойкость 30 дней'},
-        {id:3, name:'Ароматизатор "Мятная свежесть"', price:390, category:'Ароматизаторы', stock:45, description:'Мятный аромат', characteristics:'Гель 50мл'},
-        {id:4, name:'Очиститель стёкол', price:280, category:'Автохимия', stock:30, description:'Без разводов', characteristics:'Зимний до -30°C'},
-        {id:5, name:'Тормозные колодки LADA', price:1200, category:'Тормозная система', stock:20, description:'Оригинальные колодки', characteristics:'Керамические'},
-        {id:6, name:'Воздушный фильтр LADA', price:450, category:'Двигатель', stock:30, description:'Очистка воздуха', characteristics:'Для LADA'},
-        {id:7, name:'Аккумулятор LADA 60 Ач', price:4500, category:'Электрика', stock:8, description:'Стартерный', characteristics:'Пусковой ток 540А'},
-        {id:8, name:'Амортизатор LADA', price:2200, category:'Подвеска', stock:18, description:'Гидравлический', characteristics:'Для Vesta/Granta'},
-        {id:9, name:'Полироль для кузова', price:650, category:'Автохимия', stock:20, description:'Придаёт блеск', characteristics:'Восковая эмульсия'},
-        {id:10, name:'Антидождь', price:420, category:'Автохимия', stock:25, description:'Вода скатывается', characteristics:'Нано-покрытие'}
-      ],
-      users: [],
-      orders: [],
-      favorites: []
-    };
-    fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
-    console.log('✅ Данные инициализированы');
-  }
-}
-
-function readData() {
-  return JSON.parse(fs.readFileSync(DATA_FILE));
-}
-
-function writeData(data) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-}
-
-initData();
+// Supabase подключение (используем SERVICE_KEY для полного доступа)
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // ========== API ==========
-app.get('/api/products', (req, res) => {
-  const data = readData();
-  res.json(data.products);
-});
 
-app.post('/api/register', (req, res) => {
-  const {email, password, phone} = req.body;
-  const data = readData();
-  if (data.users.find(u => u.email === email)) {
-    return res.status(400).json({error: 'Email уже существует'});
+// Получить все товары
+app.get('/api/products', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('products').select('*');
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({error: err.message});
   }
-  const newUser = {id: Date.now(), email, password, phone, created_at: new Date()};
-  data.users.push(newUser);
-  writeData(data);
-  res.json({success: true, userId: newUser.id});
 });
 
-app.post('/api/login', (req, res) => {
-  const {email, password} = req.body;
-  const data = readData();
-  const user = data.users.find(u => u.email === email && u.password === password);
-  if (!user) return res.status(401).json({error: 'Неверный email или пароль'});
-  res.json({success: true, user: {id: user.id, email: user.email, phone: user.phone}});
-});
-
-app.post('/api/orders', (req, res) => {
-  const {user_id, user_email, user_phone, pickup_point, payment_method, total, items} = req.body;
-  const data = readData();
-  
-  // Проверка наличия
-  for (const item of items) {
-    const product = data.products.find(p => p.id === item.id);
-    if (!product || product.stock < item.quantity) {
-      return res.status(400).json({error: `Товар "${item.name}" недоступен`});
+// Регистрация
+app.post('/api/register', async (req, res) => {
+  const { email, password, phone } = req.body;
+  try {
+    // Проверяем существует ли пользователь
+    const { data: existing } = await supabase.from('users').select('id').eq('email', email);
+    if (existing && existing.length > 0) {
+      return res.status(400).json({error: 'Email уже существует'});
     }
+    
+    const { data, error } = await supabase
+      .from('users')
+      .insert([{ email, password, phone }])
+      .select();
+    
+    if (error) throw error;
+    res.json({success: true, userId: data[0].id});
+  } catch (err) {
+    res.status(500).json({error: err.message});
   }
-  
-  // Уменьшаем склад
-  for (const item of items) {
-    const product = data.products.find(p => p.id === item.id);
-    product.stock -= item.quantity;
+});
+
+// Логин
+app.post('/api/login', async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, email, phone')
+      .eq('email', email)
+      .eq('password', password);
+    
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      return res.status(401).json({error: 'Неверный email или пароль'});
+    }
+    
+    res.json({success: true, user: data[0]});
+  } catch (err) {
+    res.status(500).json({error: err.message});
   }
-  
-  const deliveryDate = new Date();
-  deliveryDate.setDate(deliveryDate.getDate() + 1);
-  
-  const newOrder = {
-    id: Date.now(),
-    user_id,
-    user_email,
-    user_phone,
-    pickup_point,
-    payment_method,
-    total,
-    status: 'processing',
-    order_date: new Date(),
-    delivery_date: deliveryDate,
-    items: JSON.stringify(items)
-  };
-  data.orders.push(newOrder);
-  writeData(data);
-  
-  res.json({success: true, orderId: newOrder.id, deliveryDate: deliveryDate.toLocaleDateString('ru-RU')});
 });
 
-app.get('/api/orders/:email', (req, res) => {
-  const data = readData();
-  const orders = data.orders.filter(o => o.user_email === req.params.email).sort((a,b) => new Date(b.order_date) - new Date(a.order_date));
-  res.json(orders);
-});
-
-app.get('/api/all-orders', (req, res) => {
-  const data = readData();
-  res.json(data.orders.sort((a,b) => new Date(b.order_date) - new Date(a.order_date)));
-});
-
-app.put('/api/orders/:id/cancel', (req, res) => {
-  const data = readData();
-  const order = data.orders.find(o => o.id == req.params.id);
-  if (order && order.status !== 'cancelled') {
-    // Возвращаем товары на склад
-    const items = JSON.parse(order.items);
+// Оформление заказа
+app.post('/api/orders', async (req, res) => {
+  const { user_id, user_email, user_phone, pickup_point, payment_method, total, items } = req.body;
+  try {
+    // Проверяем наличие товаров
     for (const item of items) {
-      const product = data.products.find(p => p.id === item.id);
-      if (product) product.stock += item.quantity;
+      const { data: product } = await supabase
+        .from('products')
+        .select('stock')
+        .eq('id', item.id);
+      
+      if (!product || product.length === 0 || product[0].stock < item.quantity) {
+        return res.status(400).json({error: `Товар "${item.name}" недоступен`});
+      }
     }
-    order.status = 'cancelled';
-    writeData(data);
+    
+    // Уменьшаем склад
+    for (const item of items) {
+      const { data: product } = await supabase
+        .from('products')
+        .select('stock')
+        .eq('id', item.id);
+      
+      const newStock = product[0].stock - item.quantity;
+      await supabase.from('products').update({ stock: newStock }).eq('id', item.id);
+    }
+    
+    const deliveryDate = new Date();
+    deliveryDate.setDate(deliveryDate.getDate() + 1);
+    
+    const { data, error } = await supabase
+      .from('orders')
+      .insert([{
+        user_id, user_email, user_phone, pickup_point,
+        payment_method, total, delivery_date: deliveryDate.toISOString(),
+        items: JSON.stringify(items)
+      }])
+      .select();
+    
+    if (error) throw error;
+    res.json({success: true, orderId: data[0].id, deliveryDate: deliveryDate.toLocaleDateString('ru-RU')});
+  } catch (err) {
+    res.status(500).json({error: err.message});
   }
-  res.json({success: true});
 });
 
-app.get('/api/products/search/:query', (req, res) => {
-  const data = readData();
-  const query = req.params.query.toLowerCase();
-  const results = data.products.filter(p => 
-    p.name.toLowerCase().includes(query) || 
-    p.category.toLowerCase().includes(query) ||
-    (p.characteristics && p.characteristics.toLowerCase().includes(query))
-  );
-  res.json(results);
+// Получить заказы пользователя
+app.get('/api/orders/:email', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('user_email', req.params.email)
+      .order('order_date', { ascending: false });
+    
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({error: err.message});
+  }
 });
 
+// Все заказы
+app.get('/api/all-orders', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('order_date', { ascending: false });
+    
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({error: err.message});
+  }
+});
+
+// Отменить заказ
+app.put('/api/orders/:id/cancel', async (req, res) => {
+  try {
+    // Сначала получаем заказ
+    const { data: order } = await supabase
+      .from('orders')
+      .select('items')
+      .eq('id', req.params.id);
+    
+    if (order && order.length > 0 && order[0].items) {
+      const items = JSON.parse(order[0].items);
+      for (const item of items) {
+        const { data: product } = await supabase
+          .from('products')
+          .select('stock')
+          .eq('id', item.id);
+        
+        if (product && product.length > 0) {
+          const newStock = product[0].stock + item.quantity;
+          await supabase.from('products').update({ stock: newStock }).eq('id', item.id);
+        }
+      }
+    }
+    
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: 'cancelled' })
+      .eq('id', req.params.id);
+    
+    if (error) throw error;
+    res.json({success: true});
+  } catch (err) {
+    res.status(500).json({error: err.message});
+  }
+});
+
+// Поиск товаров
+app.get('/api/products/search/:query', async (req, res) => {
+  try {
+    const searchTerm = req.params.query;
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .or(`name.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%,characteristics.ilike.%${searchTerm}%`);
+    
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({error: err.message});
+  }
+});
+
+// Статистика
+app.get('/api/stats', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('total, status')
+      .neq('status', 'cancelled');
+    
+    if (error) throw error;
+    
+    const totalOrders = data ? data.length : 0;
+    const totalRevenue = data ? data.reduce((sum, order) => sum + order.total, 0) : 0;
+    res.json({total_orders: totalOrders, total_revenue: totalRevenue});
+  } catch (err) {
+    res.json({total_orders: 0, total_revenue: 0});
+  }
+});
+
+// Техподдержка
 app.post('/api/support', (req, res) => {
   console.log('Support request:', req.body);
   res.json({success: true, status: 'offline', message: 'Техподдержка в оффлайн режиме'});
 });
 
-app.get('/api/stats', (req, res) => {
-  const data = readData();
-  const activeOrders = data.orders.filter(o => o.status !== 'cancelled');
-  const totalRevenue = activeOrders.reduce((sum, o) => sum + o.total, 0);
-  res.json({total_orders: activeOrders.length, total_revenue: totalRevenue});
+// Экспорт в Excel
+app.get('/api/export-excel', async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    let query = supabase.from('orders').select('*');
+    
+    if (startDate && endDate) {
+      query = query.gte('order_date', startDate).lte('order_date', endDate);
+    }
+    
+    const { data: orders, error } = await query.order('order_date', { ascending: false });
+    if (error) throw error;
+    
+    const excelData = orders.map(order => ({
+      'ID заказа': order.id,
+      'Дата заказа': order.order_date,
+      'Дата готовности': order.delivery_date,
+      'Email клиента': order.user_email,
+      'Телефон': order.user_phone,
+      'Пункт выдачи': order.pickup_point,
+      'Оплата': order.payment_method,
+      'Сумма (₽)': order.total,
+      'Статус': order.status === 'processing' ? 'Активен' : 'Отменён',
+      'Товары': order.items
+    }));
+    
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Заказы');
+    const filename = `orders_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`;
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buffer);
+  } catch (err) {
+    res.status(500).json({error: err.message});
+  }
 });
 
+// Отчёты
 app.get('/reports.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'reports.html'));
 });
 
+// Запуск сервера
 app.listen(PORT, () => {
   console.log(`🚀 Сервер запущен на порту ${PORT}`);
 });
