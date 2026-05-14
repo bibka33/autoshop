@@ -606,31 +606,31 @@
 </div>
 
 <div class="wrapper">
-  <header style="display: flex; flex-direction: column; gap: 15px;">
-  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-    <div class="logo"><i class="fas fa-car"></i> АВТОСТИЛЬ</div>
-    <div class="user-menu">
-      <div id="userInfo" style="font-size: 13px;"></div>
-      <button id="loginBtn" onclick="show('login')" class="blue">ВОЙТИ</button>
-      <div id="userPanel" class="hidden">
-        <div class="profile-menu">
-          <button class="profile-btn"><i class="fas fa-user-circle"></i> Кабинет</button>
-          <div class="profile-dropdown">
-            <a onclick="show('catalog')"><i class="fas fa-list"></i> Каталог</a>
-            <a onclick="show('orders')"><i class="fas fa-clipboard-list"></i> Мои заказы</a>
-            <a onclick="show('favorites')"><i class="fas fa-heart"></i> Избранное <span id="favCount" class="fav-count">0</span></a>
-            <a onclick="openCart()"><i class="fas fa-shopping-cart"></i> Корзина <span id="cartCount" class="cart-count">0</span></a>
-            <hr>
-            <button onclick="logout()"><i class="fas fa-sign-out-alt"></i> Выйти</button>
-          </div>
-        </div>
-      </div>
+  <header style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; padding: 15px 20px;">
+  <div class="logo"><i class="fas fa-car"></i> АВТОСТИЛЬ</div>
+  
+  <div style="flex: 1; max-width: 500px; margin: 0 20px;">
+    <div style="display: flex; gap: 10px;">
+      <input id="searchInput" type="text" placeholder="Поиск товаров по названию, категории, характеристикам..." style="flex: 1; padding: 10px 15px; border: 2px solid #ddd; border-radius: 8px;">
+      <button onclick="searchProducts()" class="blue" style="padding: 10px 20px;"><i class="fas fa-search"></i> ПОИСК</button>
     </div>
   </div>
-  <div style="display: flex; justify-content: center; width: 100%;">
-    <div style="display: flex; gap: 10px; width: 100%; max-width: 600px;">
-      <input id="searchInput" type="text" placeholder="Поиск товаров по названию, категории, характеристикам..." style="flex: 1; padding: 12px 15px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px;">
-      <button onclick="searchProducts()" class="blue" style="padding: 12px 24px; white-space: nowrap;"><i class="fas fa-search"></i> ПОИСК</button>
+  
+  <div class="user-menu">
+    <div id="userInfo" style="font-size: 13px;"></div>
+    <button id="loginBtn" onclick="show('login')" class="blue">ВОЙТИ</button>
+    <div id="userPanel" class="hidden">
+      <div class="profile-menu">
+        <button class="profile-btn"><i class="fas fa-user-circle"></i> Кабинет</button>
+        <div class="profile-dropdown">
+          <a onclick="show('catalog')"><i class="fas fa-list"></i> Каталог</a>
+          <a onclick="show('orders')"><i class="fas fa-clipboard-list"></i> Мои заказы</a>
+          <a onclick="show('favorites')"><i class="fas fa-heart"></i> Избранное <span id="favCount" class="fav-count">0</span></a>
+          <a onclick="openCart()"><i class="fas fa-shopping-cart"></i> Корзина <span id="cartCount" class="cart-count">0</span></a>
+          <hr>
+          <button onclick="logout()"><i class="fas fa-sign-out-alt"></i> Выйти</button>
+        </div>
+      </div>
     </div>
   </div>
 </header>
