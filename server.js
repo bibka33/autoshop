@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(bodyParser.json());
-app.use(express.static('public'));
+app.use(express.static('.')); // Изменено с 'public' на '.' так как index.html в корне
 
 const db = new Database('./autoshop.db');
 
@@ -100,7 +100,7 @@ function initProducts() {
     for (const p of products) {
       stmt.run(p.name, p.price, p.category, p.stock, p.description, p.characteristics);
     }
-    console.log('✅ Товары загружены в БД (двигатель, тормоза, подвеска, электрика, ароматизаторы, автохимия)');
+    console.log('✅ Товары загружены в БД');
   }
 }
 
@@ -135,11 +135,9 @@ app.post('/api/login', (req, res) => {
   }
 });
 
-// Оформление заказа с проверкой stock и количества
 app.post('/api/orders', (req, res) => {
   const {user_id, user_email, user_phone, pickup_point, payment_method, total, items} = req.body;
   try {
-    // Проверяем, что товары есть на складе в нужном количестве
     for (const item of items) {
       const product = db.prepare("SELECT stock, name FROM products WHERE id = ?").get(item.id);
       if (!product) {
@@ -150,13 +148,12 @@ app.post('/api/orders', (req, res) => {
       }
     }
 
-    // Уменьшаем склад
     for (const item of items) {
       db.prepare("UPDATE products SET stock = stock - ? WHERE id = ?").run(item.quantity, item.id);
     }
 
     const deliveryDate = new Date();
-    deliveryDate.setDate(deliveryDate.getDate() + 1); // через 1 день готов к выдаче
+    deliveryDate.setDate(deliveryDate.getDate() + 1);
 
     const result = db.prepare(`
       INSERT INTO orders (user_id, user_email, user_phone, pickup_point, payment_method, total, delivery_date, items)
@@ -189,7 +186,6 @@ app.get('/api/all-orders', (req, res) => {
 
 app.put('/api/orders/:id/cancel', (req, res) => {
   try {
-    // Возвращаем товары на склад при отмене
     const order = db.prepare("SELECT items FROM orders WHERE id = ?").get(req.params.id);
     if (order && order.items) {
       const items = JSON.parse(order.items);
@@ -204,7 +200,6 @@ app.put('/api/orders/:id/cancel', (req, res) => {
   }
 });
 
-// Экспорт в Excel
 app.get('/api/export-excel', (req, res) => {
   const {startDate, endDate} = req.query;
   try {
@@ -250,7 +245,6 @@ app.get('/api/stats', (req, res) => {
   }
 });
 
-// Техническая поддержка (оффлайн режим)
 app.post('/api/support', (req, res) => {
   const {name, contact, message} = req.body;
   res.json({
@@ -260,7 +254,6 @@ app.post('/api/support', (req, res) => {
   });
 });
 
-// Поиск товаров
 app.get('/api/products/search/:query', (req, res) => {
   try {
     const query = `%${req.params.query}%`;
