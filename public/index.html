@@ -904,8 +904,17 @@ async function sendSupportRequest() {
 }
 
 function closeRulesModal() {
-  if(!document.getElementById('acceptRules').checked) { alert("Подтвердите согласие с правилами"); return; }
+  const checkbox = document.getElementById('acceptRules');
+  if(!checkbox.checked) { 
+    alert("Подтвердите согласие с правилами"); 
+    return; 
+  }
+  // Сохраняем, что пользователь согласился
+  localStorage.setItem('rulesAccepted', 'true');
+  // Закрываем модальное окно
   document.getElementById('rulesModal').style.display = 'none';
+  // ПРОДОЛЖАЕМ оформление заказа
+  finish();
 }
 
 async function register() {
@@ -1069,40 +1078,111 @@ function removeFromCart(idx) {
 function openCart() { if(!user) { showAuthRequired(); return; } show('cart'); }
 
 async function finish() {
-  if(!user) { showNotification("Войдите в аккаунт", "error"); return; }
-  if(!cart.length) { showNotification("Корзина пуста", "error"); return; }
-  let rulesAccepted = localStorage.getItem('rulesAccepted');
-  if(!rulesAccepted) { alert("Пожалуйста, ознакомьтесь с правилами магазина"); document.getElementById('rulesModal').style.display = 'flex'; return; }
-  
-  let pickup = document.getElementById('pickup').value;
-  let pay = document.getElementById('pay').value;
-  let phone = document.getElementById('orderPhone').value;
-  if(!pickup) { document.getElementById('pickupError').textContent = 'Выберите пункт выдачи'; return; }
-  if(!pay) { document.getElementById('payError').textContent = 'Выберите оплату'; return; }
-  if(!validatePhone(phone)) { document.getElementById('orderPhoneError').textContent = 'Формат: 7-XXX-XXX-XX-XX'; return; }
-  if(pay === 'Карта') {
-    let cardNum = document.getElementById('cardNumber').value.replace(/\s/g,'');
-    let expiry = document.getElementById('cardExpiry').value;
-    let cvv = document.getElementById('cardCVV').value;
-    if(cardNum.length !== 16) { showNotification("Неверный номер карты", "error"); return; }
-    if(!/^\d{2}\/\d{2}$/.test(expiry)) { showNotification("Неверный срок действия", "error"); return; }
-    if(cvv.length !== 3) { showNotification("Неверный CVV", "error"); return; }
+  if(!user) { 
+    showNotification("Войдите в аккаунт", "error"); 
+    show('login');
+    return; 
+  }
+  if(!cart.length) { 
+    showNotification("Корзина пуста", "error"); 
+    return; 
   }
   
-  let total = cart.reduce((s,i) => s + i.price * (i.quantity||1), 0);
-  let itemsForOrder = cart.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity || 1 }));
+  // Проверяем согласие с правилами
+  const rulesAccepted = localStorage.getItem('rulesAccepted');
+  if(!rulesAccepted) { 
+    // Показываем окно правил и запоминаем, что нужно продолжить
+    document.getElementById('rulesModal').style.display = 'flex';
+    return; 
+  }
+  
+  const pickup = document.getElementById('pickup').value;
+  const pay = document.getElementById('pay').value;
+  const phone = document.getElementById('orderPhone').value;
+  
+  // Очищаем ошибки
+  document.getElementById('pickupError').textContent = '';
+  document.getElementById('payError').textContent = '';
+  document.getElementById('orderPhoneError').textContent = '';
+  
+  let hasError = false;
+  
+  if(!pickup) { 
+    document.getElementById('pickupError').textContent = 'Выберите пункт выдачи'; 
+    hasError = true;
+  }
+  if(!pay) { 
+    document.getElementById('payError').textContent = 'Выберите способ оплаты'; 
+    hasError = true;
+  }
+  if(!phone) { 
+    document.getElementById('orderPhoneError').textContent = 'Введите телефон'; 
+    hasError = true;
+  } else if (!validatePhone(phone)) { 
+    document.getElementById('orderPhoneError').textContent = 'Формат: 7-XXX-XXX-XX-XX'; 
+    hasError = true;
+  }
+  
+  if(pay === 'Карта') {
+    const cardNum = document.getElementById('cardNumber').value.replace(/\s/g,'');
+    const expiry = document.getElementById('cardExpiry').value;
+    const cvv = document.getElementById('cardCVV').value;
+    if(!cardNum || cardNum.length !== 16) { 
+      showNotification("Неверный номер карты", "error"); 
+      hasError = true;
+    }
+    if(!expiry || !/^\d{2}\/\d{2}$/.test(expiry)) { 
+      showNotification("Неверный срок действия", "error"); 
+      hasError = true;
+    }
+    if(!cvv || cvv.length !== 3) { 
+      showNotification("Неверный CVV", "error"); 
+      hasError = true;
+    }
+  }
+  
+  if(hasError) return;
+  
+  const total = cart.reduce((s, i) => s + i.price * (i.quantity || 1), 0);
+  const itemsForOrder = cart.map(i => ({ 
+    id: i.id, 
+    name: i.name, 
+    price: i.price, 
+    quantity: i.quantity || 1 
+  }));
+  
   try {
-    let res = await fetch('/api/orders', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ user_id:user.id, user_email:user.email, user_phone:phone, pickup_point:pickup, payment_method:pay, total, items:itemsForOrder }) });
-    let data = await res.json();
+    const res = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: user.id,
+        user_email: user.email,
+        user_phone: phone,
+        pickup_point: pickup,
+        payment_method: pay,
+        total: total,
+        items: itemsForOrder
+      })
+    });
+    
+    const data = await res.json();
+    
     if(data.success) {
-      showNotification(`Заказ №${data.orderId} оформлен! Готов к выдаче ${data.deliveryDate}`, "success");
+      showNotification(`Заказ №${data.orderId} оформлен! Готов к выдаче ${data.deliveryDate}`, "success", 5000);
       cart = [];
       saveCart();
       document.getElementById('cartCount').innerText = 0;
+      renderCart();
       show('orders');
       renderOrders();
-    } else { showNotification(data.error, "error"); }
-  } catch(e) { showNotification("Ошибка сервера", "error"); }
+    } else {
+      showNotification(data.error || "Ошибка при оформлении заказа", "error");
+    }
+  } catch(e) {
+    showNotification("Ошибка сервера", "error");
+    console.error(e);
+  }
 }
 
 async function renderOrders() {
