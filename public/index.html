@@ -545,15 +545,43 @@
   box-shadow: 0 10px 30px rgba(0,0,0,0.15);
   border-radius: 10px;
   z-index: 1000;
-  margin-top: 5px;
+  margin-top: 0;
   border-top: 3px solid #e74c3c;
+  animation: fadeIn 0.15s ease;
 }
 
+/* Меню показывается при наведении на кнопку */
 .profile-menu:hover .profile-dropdown {
   display: block;
 }
 
-.profile-dropdown a, .profile-dropdown button {
+/* Дополнительная зона - мост между кнопкой и меню */
+.profile-menu {
+  padding-bottom: 15px;
+  margin-bottom: -15px;
+}
+
+/* Увеличиваем зону наведения на меню */
+.profile-dropdown {
+  padding-top: 10px;
+  margin-top: -10px;
+}
+
+/* Плавное появление */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Стили для пунктов меню */
+.profile-dropdown a,
+.profile-dropdown button {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -565,22 +593,20 @@
   background: none;
   border: none;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
-.profile-dropdown a:hover, .profile-dropdown button:hover {
+.profile-dropdown a:hover,
+.profile-dropdown button:hover {
   background: #f8f9fa;
   color: #e74c3c;
+  padding-left: 25px;
 }
 
 .profile-dropdown hr {
   margin: 8px 0;
-  border-color: #ecf0f1;
-}
-
-.profile-btn {
-  background: #e74c3c !important;
-  border-radius: 6px !important;
-  padding: 8px 16px !important;
+  border: none;
+  border-top: 1px solid #ecf0f1;
 }
   </style>
 </head>
