@@ -530,29 +530,6 @@
       .item-actions { justify-content: center; }
       .logo { font-size: 18px; }
     }
-
-    .profile-menu:hover .profile-dropdown,
-.profile-dropdown:hover {
-  display: block !important;
-}
-
-.profile-dropdown {
-  display: none;
-}
-
-.profile-menu:hover .profile-dropdown {
-  display: block;
-}
-
-.profile-dropdown::before {
-  content: '';
-  position: absolute;
-  top: -10px;
-  left: 0;
-  right: 0;
-  height: 10px;
-  background: transparent;
-}
   </style>
 </head>
 <body>
@@ -584,29 +561,17 @@
       <div id="userInfo" style="font-size: 13px;"></div>
       <button id="loginBtn" onclick="show('login')" class="blue">ВОЙТИ</button>
       <div id="userPanel" class="hidden">
-        <div class="profile-menu" style="position: relative; display: inline-block;">
-          <button class="profile-btn" style="background: #e74c3c; border-radius: 6px; padding: 8px 16px; color: white; border: none; cursor: pointer;">
-            <i class="fas fa-user-circle"></i> Кабинет
-          </button>
-          <div class="profile-dropdown" style="position: absolute; right: 0; top: 100%; background: white; min-width: 220px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); border-radius: 10px; z-index: 1000; margin-top: 5px; border-top: 3px solid #e74c3c; display: none;">
-          <a onclick="show('catalog')" style="display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #2c3e50; text-decoration: none; cursor: pointer;">
-          <i class="fas fa-list"></i> Каталог
-            </a>
-          <a onclick="show('orders')" style="display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #2c3e50; text-decoration: none; cursor: pointer;">
-          <i class="fas fa-clipboard-list"></i> Мои заказы
-            </a>
-          <a onclick="show('favorites')" style="display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #2c3e50; text-decoration: none; cursor: pointer;">
-          <i class="fas fa-heart"></i> Избранное <span id="favCount" class="fav-count">0</span>
-            </a>
-            <a onclick="openCart()" style="display: flex; align-items: center; gap: 10px; padding: 12px 20px; color: #2c3e50; text-decoration: none; cursor: pointer;">
-            <i class="fas fa-shopping-cart"></i> Корзина <span id="cartCount" class="cart-count">0</span>
-              </a>
-            <hr style="margin: 8px 0;">
-            <button onclick="logout()" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 20px; background: none; border: none; cursor: pointer; text-align: left;">
-            <i class="fas fa-sign-out-alt"></i> Выйти
-              </button>
-              </div>
+        <div class="profile-menu">
+          <button class="profile-btn"><i class="fas fa-user-circle"></i> Кабинет</button>
+          <div class="profile-dropdown">
+            <a onclick="show('catalog')"><i class="fas fa-list"></i> Каталог</a>
+            <a onclick="show('orders')"><i class="fas fa-clipboard-list"></i> Мои заказы</a>
+            <a onclick="show('favorites')"><i class="fas fa-heart"></i> Избранное <span id="favCount" class="fav-count">0</span></a>
+            <a onclick="openCart()"><i class="fas fa-shopping-cart"></i> Корзина <span id="cartCount" class="cart-count">0</span></a>
+            <hr>
+            <button onclick="logout()"><i class="fas fa-sign-out-alt"></i> Выйти</button>
           </div>
+        </div>
       </div>
     </div>
   </div>
