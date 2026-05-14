@@ -2,6 +2,7 @@ const express = require('express');
 const Database = require('better-sqlite3');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const XLSX = require('xlsx');
 const path = require('path');
 
 const app = express();
@@ -11,8 +12,7 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-// Создаем базу данных в памяти для Railway (временное решение)
-const db = new Database(':memory:');
+const db = new Database('./autoshop.db');
 
 // ========== СОЗДАНИЕ ТАБЛИЦ ==========
 db.exec(`
@@ -23,7 +23,8 @@ db.exec(`
     category TEXT NOT NULL,
     stock INTEGER DEFAULT 10,
     description TEXT,
-    characteristics TEXT
+    characteristics TEXT,
+    image TEXT
   );
 
   CREATE TABLE IF NOT EXISTS users (
@@ -45,40 +46,42 @@ db.exec(`
     status TEXT DEFAULT 'processing',
     order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     delivery_date TEXT,
-    items TEXT
+    items TEXT,
+    FOREIGN KEY(user_id) REFERENCES users(id)
   );
 
   CREATE TABLE IF NOT EXISTS favorites (
     user_id INTEGER,
     product_id INTEGER,
-    PRIMARY KEY (user_id, product_id)
+    PRIMARY KEY (user_id, product_id),
+    FOREIGN KEY(user_id) REFERENCES users(id),
+    FOREIGN KEY(product_id) REFERENCES products(id)
   );
 `);
 
 // ========== ИНИЦИАЛИЗАЦИЯ ТОВАРОВ ==========
-const products = [
-  {name:'Масло моторное LADA Professional 5W-40', price:2100, category:'Двигатель', stock:25, characteristics:'5W-40, синтетика, 4л'},
-  {name:'Воздушный фильтр LADA', price:450, category:'Двигатель', stock:30, characteristics:'Для Granta, Kalina, Priora'},
-  {name:'Свечи зажигания LADA', price:350, category:'Двигатель', stock:40, characteristics:'Комплект 4 шт'},
-  {name:'Тормозные колодки LADA', price:1200, category:'Тормозная система', stock:20, characteristics:'Керамические, комплект 4 шт'},
-  {name:'Тормозной диск LADA', price:1800, category:'Тормозная система', stock:12, characteristics:'Диаметр 260мм'},
-  {name:'Амортизатор LADA', price:2200, category:'Подвеска', stock:18, characteristics:'Для Vesta/Granta'},
-  {name:'Пружина подвески LADA', price:1500, category:'Подвеска', stock:10, characteristics:'Высота +20мм'},
-  {name:'Аккумулятор LADA 60 Ач', price:4500, category:'Электрика', stock:8, characteristics:'Пусковой ток 540А'},
-  {name:'Генератор LADA 120А', price:5500, category:'Электрика', stock:5, characteristics:'Для Vesta/XRAY'},
-  {name:'Ароматизатор Кожа', price:350, category:'Ароматизаторы', stock:50, characteristics:'Стойкость 30 дней'},
-  {name:'Ароматизатор Мятная свежесть', price:390, category:'Ароматизаторы', stock:45, characteristics:'Гель 50мл'},
-  {name:'Очиститель стёкол', price:280, category:'Автохимия', stock:30, characteristics:'Зимний до -30°C'},
-  {name:'Полироль для кузова', price:650, category:'Автохимия', stock:20, characteristics:'Восковая эмульсия 250мл'},
-  {name:'Антидождь', price:420, category:'Автохимия', stock:25, characteristics:'Нано-покрытие 100мл'}
-];
+function initProducts() {
+  const products = [
+    {name:'Масло моторное ТЕSMA (2+1)', price:3200, category:'Двигатель', stock:10},
+    {name:'Воздушный фильтр Mann (с углем)', price:850, category:'Двигатель', stock:15},
+    {name:'Свечи зажигания NGK (иридиевые)', price:1800, category:'Двигатель', stock:20},
+    {name:'Тормозные колодки Brembo (передние)', price:2500, category:'Тормозная система', stock:8},
+    {name:'Тормозной диск ATE (вентилируемый)', price:4200, category:'Тормозная система', stock:6},
+    {name:'Амортизатор Sachs (газовый)', price:5400, category:'Подвеска', stock:7},
+    {name:'Аккумулятор Varta (70 Ач)', price:7200, category:'Электрика', stock:4}
+  ];
 
-const stmt = db.prepare("INSERT INTO products (name, price, category, stock, characteristics) VALUES (?, ?, ?, ?, ?)");
-for (const p of products) {
-  stmt.run(p.name, p.price, p.category, p.stock, p.characteristics);
+  const count = db.prepare("SELECT COUNT(*) as count FROM products").get();
+  if (count.count === 0) {
+    const stmt = db.prepare("INSERT INTO products (name, price, category, stock) VALUES (?, ?, ?, ?)");
+    for (const p of products) {
+      stmt.run(p.name, p.price, p.category, p.stock);
+    }
+    console.log('✅ Товары загружены в БД');
+  }
 }
 
-// API endpoints
+// API endpoints (ваши оригинальные)
 app.get('/api/products', (req, res) => {
   try {
     const rows = db.prepare("SELECT * FROM products").all();
@@ -122,7 +125,7 @@ app.post('/api/orders', (req, res) => {
       db.prepare("UPDATE products SET stock = stock - ? WHERE id = ?").run(item.quantity, item.id);
     }
     const deliveryDate = new Date();
-    deliveryDate.setDate(deliveryDate.getDate() + 1);
+    deliveryDate.setDate(deliveryDate.getDate() + 2);
     const result = db.prepare(`
       INSERT INTO orders (user_id, user_email, user_phone, pickup_point, payment_method, total, delivery_date, items)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -142,36 +145,17 @@ app.get('/api/orders/:email', (req, res) => {
   }
 });
 
-app.put('/api/orders/:id/cancel', (req, res) => {
-  try {
-    db.prepare("UPDATE orders SET status = 'cancelled' WHERE id = ?").run(req.params.id);
-    res.json({success: true});
-  } catch (err) {
-    res.status(500).json({error: err.message});
-  }
-});
-
 app.get('/api/products/search/:query', (req, res) => {
   try {
     const query = `%${req.params.query}%`;
-    const rows = db.prepare(`
-      SELECT * FROM products
-      WHERE name LIKE ? OR category LIKE ? OR characteristics LIKE ?
-    `).all(query, query, query);
+    const rows = db.prepare("SELECT * FROM products WHERE name LIKE ? OR category LIKE ?").all(query, query);
     res.json(rows);
   } catch (err) {
     res.status(500).json({error: err.message});
   }
 });
 
-app.post('/api/support', (req, res) => {
-  res.json({success: true, status: 'offline'});
-});
-
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
+initProducts();
 app.listen(PORT, () => {
-  console.log(`🚀 Сервер запущен на порту ${PORT}`);
+  console.log(`🚀 Сервер запущен на http://localhost:${PORT}`);
 });
